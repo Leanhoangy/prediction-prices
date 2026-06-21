@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>Upload / Map / Train</h1>
+    <p>Upload file Excel/CSV, map cột dữ liệu rồi chọn phân tích riêng, train riêng hoặc cập nhật dataset hệ thống.</p>
+</section>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data">
+        <label>Chọn file Excel/CSV</label>
+        <input type="file" name="file" required>
+
+        <label>Loại bất động sản</label>
+        <select name="bds_type" required>
+            {% for key, config in configs.items() %}
+            <option value="{{ key }}">{{ config.label }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Chức năng</label>
+        <select name="mode" required>
+            <option value="analyze">Chỉ phân tích file riêng</option>
+            <option value="train_private">Train model riêng, không cập nhật hệ thống</option>
+            <option value="update_system">Cập nhật dataset hệ thống + train lại model</option>
+        </select>
+
+        <button type="submit">Tiếp tục map cột</button>
+    </form>
+</div>
+{% endblock %}

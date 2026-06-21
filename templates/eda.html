@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>Phân tích Khám phá Dữ liệu (EDA)</h1>
+    <p>Thống kê mô tả và trực quan hóa phân phối dữ liệu trước khi train model.</p>
+</section>
+
+<!-- Tab chọn loại BĐS -->
+<div class="card" style="padding: 16px 24px;">
+    {% for key, cfg in configs.items() %}
+        <a href="/eda/{{ key }}"
+           class="btn tab-btn {% if key == selected %}tab-active{% else %}tab-inactive{% endif %}">
+            {{ cfg.label }}
+        </a>
+    {% endfor %}
+</div>
+<style>
+    .tab-btn { margin-right: 10px; }
+    .tab-active { background: #0f172a; }
+    .tab-inactive { background: #e0f2fe; color: #1e3a8a; }
+</style>
+
+<!-- Thống kê tóm tắt -->
+<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="card" style="text-align:center;">
+        <div class="muted" style="font-size:13px;">Số bản ghi (sau làm sạch)</div>
+        <div style="font-size:28px; font-weight:800; color:#2563eb; margin-top:6px;">{{ stats.total }}</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div class="muted" style="font-size:13px;">Giá trung bình</div>
+        <div style="font-size:28px; font-weight:800; color:#047857; margin-top:6px;">{{ stats.price_mean }}</div>
+        <div class="muted" style="font-size:12px;">triệu đồng</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div class="muted" style="font-size:13px;">Giá thấp nhất – cao nhất</div>
+        <div style="font-size:20px; font-weight:800; color:#7c3aed; margin-top:6px;">
+            {{ stats.price_min }} – {{ stats.price_max }}
+        </div>
+        <div class="muted" style="font-size:12px;">triệu đồng</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div class="muted" style="font-size:13px;">Diện tích trung bình</div>
+        <div style="font-size:28px; font-weight:800; color:#d97706; margin-top:6px;">{{ stats.area_mean }}</div>
+        <div class="muted" style="font-size:12px;">m²</div>
+    </div>
+</div>
+
+<!-- Biểu đồ hàng 1: phân phối giá + diện tích -->
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-top:0;">Phân phối giá</h3>
+        <img src="/static/{{ charts.price_hist }}" class="chart" style="width:100%;">
+        <p class="muted" style="font-size:13px; margin-top:8px;">
+            Trung vị: <b>{{ stats.price_median }} triệu</b> &nbsp;|&nbsp; Trung bình: <b>{{ stats.price_mean }} triệu</b>
+        </p>
+    </div>
+    <div class="card">
+        <h3 style="margin-top:0;">Phân phối diện tích</h3>
+        <img src="/static/{{ charts.area_hist }}" class="chart" style="width:100%;">
+        <p class="muted" style="font-size:13px; margin-top:8px;">
+            Trung vị: <b>{{ stats.area_median }} m²</b> &nbsp;|&nbsp; Trung bình: <b>{{ stats.area_mean }} m²</b>
+        </p>
+    </div>
+</div>
+
+<!-- Biểu đồ hàng 2: scatter + top quận -->
+<div class="grid-2">
+    <div class="card">
+        <h3 style="margin-top:0;">Tương quan Giá – Diện tích</h3>
+        <img src="/static/{{ charts.scatter }}" class="chart" style="width:100%;">
+        <p class="muted" style="font-size:13px; margin-top:8px;">
+            Mỗi điểm là một bất động sản. Xu hướng tăng → diện tích lớn giá cao hơn.
+        </p>
+    </div>
+    <div class="card">
+        <h3 style="margin-top:0;">Top 10 quận/huyện theo giá trung bình</h3>
+        <img src="/static/{{ charts.quan_bar }}" class="chart" style="width:100%;">
+    </div>
+</div>
+
+<!-- Biểu đồ hàng 3: boxplot hướng -->
+<div class="card">
+    <h3 style="margin-top:0;">Phân phối giá theo hướng</h3>
+    <img src="/static/{{ charts.huong_box }}" class="chart" style="max-width:860px; display:block; margin:auto;">
+    <p class="muted" style="font-size:13px; margin-top:8px; text-align:center;">
+        Đường ngang trong hộp = trung vị. Hộp = IQR (Q1–Q3). Điểm ngoài = outlier đã bị loại trước khi train.
+    </p>
+</div>
+{% endblock %}

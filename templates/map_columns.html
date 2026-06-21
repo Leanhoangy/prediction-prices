@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>Map cột dữ liệu</h1>
+    <p>File: {{ meta.original_name }}. Chọn cột trong file upload tương ứng với cột chuẩn của hệ thống.</p>
+</section>
+
+<div class="card">
+    <form method="POST">
+        <table>
+            <tr>
+                <th>Cột chuẩn hệ thống</th>
+                <th>Cột trong file upload</th>
+            </tr>
+            {% for system_col in config.required %}
+            <tr>
+                <td><b>{{ labels[system_col] }}</b> <span class="muted">({{ system_col }})</span></td>
+                <td>
+                    <select name="{{ system_col }}" required>
+                        <option value="">-- Chọn cột --</option>
+                        {% for col in meta.columns %}
+                        <option value="{{ col }}" {% if meta.suggestions[system_col] == col %}selected{% endif %}>{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <button type="submit">Kiểm tra dữ liệu và xử lý</button>
+    </form>
+</div>
+{% endblock %}

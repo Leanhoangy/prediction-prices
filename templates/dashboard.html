@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>Real Estate AI Platform</h1>
+    <p>Ứng dụng Flask demo quy trình Data Mining: làm sạch dữ liệu, khử nhiễu bằng IQR, train Linear Regression và Random Forest, so sánh mô hình và dự đoán giá bất động sản.</p>
+</section>
+
+<div class="grid">
+{% for c in cards %}
+    <div class="card">
+        <h2>{{ c.label }}</h2>
+        <p class="muted">Số dòng dataset: <b>{{ c.rows }}</b></p>
+        <p>Dataset: <span class="badge {{ 'ok' if c.dataset_exists else 'no' }}">{{ 'Có' if c.dataset_exists else 'Chưa có' }}</span></p>
+        <p>Linear: <span class="badge {{ 'ok' if c.linear_exists else 'no' }}">{{ 'Có' if c.linear_exists else 'Chưa có' }}</span></p>
+        <p>Random Forest: <span class="badge {{ 'ok' if c.rf_exists else 'no' }}">{{ 'Có' if c.rf_exists else 'Chưa có' }}</span></p>
+        <p>XGBoost: <span class="badge {{ 'ok' if c.xgb_exists else 'no' }}">{{ 'Có' if c.xgb_exists else 'Chưa có' }}</span></p>
+        <p>Best Model: <span class="badge {{ 'ok' if c.best_exists else 'info' }}">{{ c.best_name if c.best_exists else 'Chưa train' }}</span></p>
+    </div>
+{% endfor %}
+</div>
+
+<div class="card">
+    <h2>Luồng xử lý chính</h2>
+    <p>Dataset → Xóa dòng thiếu/sai → Khử outlier bằng IQR → Chia train/test 80/20 → Train Linear + Random Forest + XGBoost → Tính MAE/MSE/RMSE/R² → Lưu model tốt nhất.</p>
+    <p class="muted">Lưu ý: App không train trực tiếp ở Dashboard. Bạn chạy <b>train_models.py</b> trước để sinh file .pkl, sau đó mới dùng trang dự đoán.</p>
+</div>
+{% endblock %}

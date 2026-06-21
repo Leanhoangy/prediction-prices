@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>{{ title }}</h1>
+    <p>Kết quả xử lý dữ liệu, làm sạch dữ liệu, đánh giá mô hình và biểu đồ phân tích.</p>
+</section>
+
+{% if errors %}
+<div class="card error">
+    <h3>Lỗi</h3>
+    {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+</div>
+{% endif %}
+
+{% if warnings %}
+<div class="card warning">
+    <h3>Cảnh báo làm sạch dữ liệu</h3>
+    {% for w in warnings %}<p>{{ w }}</p>{% endfor %}
+</div>
+{% endif %}
+
+{% if cleaning_report %}
+<div class="card">
+    <h2>Báo cáo làm sạch dữ liệu</h2>
+    <table>
+        <tr><th>Mục</th><th>Số dòng</th></tr>
+        <tr><td>Dòng ban đầu</td><td>{{ cleaning_report.original_rows }}</td></tr>
+        <tr><td>Xóa do thiếu dữ liệu</td><td>{{ cleaning_report.missing_removed }}</td></tr>
+        <tr><td>Xóa do sai kiểu/giá trị không hợp lệ</td><td>{{ cleaning_report.invalid_removed }}</td></tr>
+        <tr><td>Xóa dòng trùng</td><td>{{ cleaning_report.duplicate_removed }}</td></tr>
+        <tr><td>Xóa outlier bằng IQR</td><td>{{ cleaning_report.outlier_removed }}</td></tr>
+        <tr><td>Dòng còn lại</td><td>{{ cleaning_report.final_rows }}</td></tr>
+    </table>
+</div>
+{% endif %}
+
+{% if analysis %}
+<div class="card">
+    <h2>Phân tích dữ liệu</h2>
+    <p>Số dòng: <b>{{ analysis.rows }}</b></p>
+    <p>Số cột: <b>{{ analysis.cols }}</b></p>
+    <p>Các cột: {{ analysis.columns }}</p>
+</div>
+{% endif %}
+
+{% if corr_chart %}
+<div class="card">
+    <h2>Correlation Heatmap</h2>
+    <img class="chart" src="{{ url_for('static', filename=corr_chart) }}">
+</div>
+{% endif %}
+
+{% if train_result %}
+<div class="card">
+    <h2>So sánh 3 thuật toán</h2>
+    <table>
+        <tr><th>Metric</th><th>Linear Regression</th><th>Random Forest</th><th>XGBoost</th></tr>
+        {% for m in ['MAE','MSE','RMSE','R2'] %}
+        <tr>
+            <td>{{ m }}</td>
+            <td>{{ train_result.linear.metrics[m] }}</td>
+            <td>{{ train_result.random_forest.metrics[m] }}</td>
+            <td>{{ train_result.xgboost.metrics[m] if train_result.xgboost is defined else '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p><b>Model tốt nhất:</b> {{ train_result.best_algorithm }} | <b>R²:</b> {{ train_result.best_metrics.R2 }}</p>
+</div>
+
+<div class="grid" style="grid-template-columns: repeat(3,1fr);">
+    <div class="card">
+        <h3>Linear: Actual vs Predicted</h3>
+        <img class="chart" src="{{ url_for('static', filename=train_result.linear.charts.actual_vs_predicted) }}">
+    </div>
+    <div class="card">
+        <h3>RF: Actual vs Predicted</h3>
+        <img class="chart" src="{{ url_for('static', filename=train_result.random_forest.charts.actual_vs_predicted) }}">
+    </div>
+    {% if train_result.xgboost is defined %}
+    <div class="card">
+        <h3>XGBoost: Actual vs Predicted</h3>
+        <img class="chart" src="{{ url_for('static', filename=train_result.xgboost.charts.actual_vs_predicted) }}">
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid" style="grid-template-columns: repeat(3,1fr);">
+    <div class="card">
+        <h3>Linear Coefficients</h3>
+        {% if train_result.linear.charts.feature_importance %}
+        <img class="chart" src="{{ url_for('static', filename=train_result.linear.charts.feature_importance) }}">
+        {% endif %}
+    </div>
+    <div class="card">
+        <h3>RF Feature Importance</h3>
+        {% if train_result.random_forest.charts.feature_importance %}
+        <img class="chart" src="{{ url_for('static', filename=train_result.random_forest.charts.feature_importance) }}">
+        {% endif %}
+    </div>
+    {% if train_result.xgboost is defined %}
+    <div class="card">
+        <h3>XGBoost Feature Importance</h3>
+        {% if train_result.xgboost.charts.feature_importance %}
+        <img class="chart" src="{{ url_for('static', filename=train_result.xgboost.charts.feature_importance) }}">
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if old_best_metrics or decision %}
+<div class="card">
+    <h2>So sánh model production cũ và best model mới</h2>
+    <table>
+        <tr><th>Metric</th><th>Model cũ</th><th>Model mới</th></tr>
+        {% for m in ['MAE','MSE','RMSE','R2'] %}
+        <tr>
+            <td>{{ m }}</td>
+            <td>{{ old_best_metrics[m] if old_best_metrics else 'Chưa có' }}</td>
+            <td>{{ train_result.best_metrics[m] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="{{ 'success' if decision.better else 'warning' }}">
+        <b>{{ decision.message }}</b>
+        {% if updated_production %}Đã cập nhật production.{% endif %}
+    </div>
+</div>
+{% endif %}
+
+<a href="/upload" class="btn">Quay lại Upload</a>
+{% endblock %}

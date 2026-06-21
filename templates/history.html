@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <h1>Lịch sử train</h1>
+    <p>Ghi lại các lần train riêng hoặc cập nhật hệ thống.</p>
+</section>
+
+<div class="card">
+    <table>
+        <tr>
+            <th>Thời gian</th>
+            <th>Chức năng</th>
+            <th>Loại</th>
+            <th>Best model</th>
+            <th>Linear R²</th>
+            <th>RF R²</th>
+            <th>Cập nhật production</th>
+        </tr>
+        {% for r in records %}
+        <tr>
+            <td>{{ r.time }}</td>
+            <td>{{ r.mode }}</td>
+            <td>{{ r.bds_label }}</td>
+            <td>{{ r.best_algorithm }}</td>
+            <td>{{ r.linear_metrics.R2 }}</td>
+            <td>{{ r.rf_metrics.R2 }}</td>
+            <td>{{ 'Có' if r.updated_production else 'Không' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
