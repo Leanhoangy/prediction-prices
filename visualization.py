@@ -130,7 +130,7 @@ def create_eda_charts(df, bds_type):
     charts = {}
 
     # 1. Histogram phân phối giá
-    fn = _chart_name("eda_price_hist")
+    fn = _chart_name(f"{bds_type}_eda_price_hist")
     plt.figure(figsize=(8, 4))
     plt.hist(df["Gia"], bins=30, color="#2563eb", alpha=0.85, edgecolor="white")
     plt.xlabel("Giá (triệu đồng)")
@@ -142,7 +142,7 @@ def create_eda_charts(df, bds_type):
     charts["price_hist"] = f"charts/{fn}"
 
     # 2. Histogram phân phối diện tích
-    fn = _chart_name("eda_area_hist")
+    fn = _chart_name(f"{bds_type}_eda_area_hist")
     plt.figure(figsize=(8, 4))
     plt.hist(df["DienTich"], bins=30, color="#10b981", alpha=0.85, edgecolor="white")
     plt.xlabel("Diện tích (m²)")
@@ -154,7 +154,7 @@ def create_eda_charts(df, bds_type):
     charts["area_hist"] = f"charts/{fn}"
 
     # 3. Scatter giá vs diện tích (jitter để tránh cột dọc khi data là số nguyên)
-    fn = _chart_name("eda_scatter")
+    fn = _chart_name(f"{bds_type}_eda_scatter")
     jitter = np.random.default_rng(42).uniform(-0.5, 0.5, size=len(df))
     plt.figure(figsize=(8, 5))
     plt.scatter(df["DienTich"] + jitter, df["Gia"], alpha=0.35, color="#7c3aed", s=14)
@@ -167,34 +167,72 @@ def create_eda_charts(df, bds_type):
     charts["scatter"] = f"charts/{fn}"
 
     # 4. Top 10 quận/huyện theo giá trung bình
-    avg_quan = df.groupby("Quan")["Gia"].mean().sort_values(ascending=False).head(10)
-    fn = _chart_name("eda_quan_bar")
+    # Chỉ lấy các quận/huyện có đủ số mẫu để tránh kết luận sai
+    min_samples = 5
+
+    quan_stats = (
+        df.groupby("Quan")
+        .agg(
+            GiaTrungBinh=("Gia", "mean"),
+            SoMau=("Gia", "count")
+        )
+        .reset_index()
+    )
+
+    quan_stats = quan_stats[quan_stats["SoMau"] >= min_samples]
+    top_quan = quan_stats.sort_values("GiaTrungBinh", ascending=False).head(10)
+
+    fn = _chart_name(f"{bds_type}_eda_quan_bar")
     plt.figure(figsize=(9, 5))
-    plt.barh(range(len(avg_quan)), avg_quan.values, color="#2563eb")
-    plt.yticks(range(len(avg_quan)), avg_quan.index)
+
+    labels = [
+        f"{row['Quan']} (n={int(row['SoMau'])})"
+        for _, row in top_quan.iterrows()
+    ]
+
+    plt.barh(range(len(top_quan)), top_quan["GiaTrungBinh"], color="#2563eb")
+    plt.yticks(range(len(top_quan)), labels)
     plt.gca().invert_yaxis()
     plt.xlabel("Giá trung bình (triệu đồng)")
-    plt.title("Top 10 quận/huyện theo giá trung bình")
+    plt.title(f"Top 10 quận/huyện theo giá trung bình (n ≥ {min_samples})")
     plt.tight_layout()
     plt.savefig(CHART_DIR / fn, dpi=140)
     plt.close()
+
     charts["quan_bar"] = f"charts/{fn}"
 
-    # 5. Boxplot giá theo hướng (top 6 phổ biến nhất)
-    top_huong = df["Huong"].value_counts().head(6).index.tolist()
+    # 5. Boxplot giá theo hướng
+    # Chỉ lấy các hướng có đủ số mẫu
+    min_samples = 5
+
+    huong_counts = df["Huong"].value_counts()
+    valid_huong = huong_counts[huong_counts >= min_samples].head(6)
+
+    top_huong = valid_huong.index.tolist()
     groups = [df[df["Huong"] == h]["Gia"].values for h in top_huong]
-    fn = _chart_name("eda_huong_box")
+
+    labels = [
+        f"{h}\n(n={int(valid_huong[h])})"
+        for h in top_huong
+    ]
+
+    fn = _chart_name(f"{bds_type}_eda_huong_box")
     plt.figure(figsize=(9, 5))
-    plt.boxplot(groups, labels=top_huong, patch_artist=True,
-                boxprops=dict(facecolor="#dbeafe"), medianprops=dict(color="#1d4ed8", linewidth=2))
+    plt.boxplot(
+        groups,
+        labels=labels,
+        patch_artist=True,
+        boxprops=dict(facecolor="#dbeafe"),
+        medianprops=dict(color="#1d4ed8", linewidth=2)
+    )
     plt.ylabel("Giá (triệu đồng)")
-    plt.title("Phân phối giá theo hướng")
+    plt.title(f"Phân phối giá theo hướng nhà (n ≥ {min_samples})")
     plt.xticks(rotation=25, ha="right")
     plt.tight_layout()
     plt.savefig(CHART_DIR / fn, dpi=140)
     plt.close()
-    charts["huong_box"] = f"charts/{fn}"
 
+    charts["huong_box"] = f"charts/{fn}"
     return charts
 
 
