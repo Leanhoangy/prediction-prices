@@ -22,22 +22,75 @@ def analyze_dataframe(df):
     }
 
 
-def _chart_name(prefix):
-    return f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.png"
+def _safe_name(text):
+    """Chuẩn hóa tên file: bỏ ký tự lạ, đổi khoảng trắng thành dấu _."""
+    text = str(text).lower().strip()
+    text = text.replace(" - actual vs predicted", "")
+    text = text.replace("actual vs predicted", "")
+    text = text.replace(" ", "_")
+    text = text.replace("/", "_")
+    text = text.replace("\\", "_")
+    text = text.replace(":", "_")
+    text = text.replace("(", "")
+    text = text.replace(")", "")
+    text = text.replace("–", "_")
+    text = text.replace("-", "_")
+    while "__" in text:
+        text = text.replace("__", "_")
+    return text.strip("_")
 
 
-def create_actual_vs_pred_chart(y_test, y_pred, title):
-    filename = _chart_name("actual_pred")
+def _chart_name(prefix, unique=False):
+    """
+    unique=False: ghi đè chart mới nhất, tránh sinh quá nhiều file rác.
+    unique=True: tạo file random theo thời gian nếu cần lưu lịch sử.
+    """
+    if unique:
+        return f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.png"
+    return f"{prefix}.png"
+
+
+def create_actual_vs_pred_chart(y_test, y_pred, title, unique=False):
+    """
+    Tạo biểu đồ Actual vs Predicted.
+
+    Ví dụ title:
+    - linear_nha - Actual vs Predicted
+    - rf_nha - Actual vs Predicted
+    - xgboost_nha - Actual vs Predicted
+
+    File xuất ra:
+    - linear_nha_actual_vs_predicted.png
+    - rf_nha_actual_vs_predicted.png
+    - xgboost_nha_actual_vs_predicted.png
+    """
+
+    base_name = _safe_name(title)
+    filename = _chart_name(f"{base_name}_actual_vs_predicted", unique=unique)
     path = CHART_DIR / filename
+
+    y_test = np.asarray(y_test, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
 
     plt.figure(figsize=(7, 5))
     plt.scatter(y_test, y_pred, alpha=0.7)
+
     min_val = min(float(np.min(y_test)), float(np.min(y_pred)))
     max_val = max(float(np.max(y_test)), float(np.max(y_pred)))
-    plt.plot([min_val, max_val], [min_val, max_val], linestyle="--")
-    plt.xlabel("Giá thực tế")
-    plt.ylabel("Giá dự đoán")
+
+    padding = (max_val - min_val) * 0.05
+    min_axis = max(0, min_val - padding)
+    max_axis = max_val + padding
+
+    plt.plot([min_axis, max_axis], [min_axis, max_axis], linestyle="--")
+
+    plt.xlim(min_axis, max_axis)
+    plt.ylim(min_axis, max_axis)
+
+    plt.xlabel("Giá thực tế (triệu đồng)")
+    plt.ylabel("Giá dự đoán (triệu đồng)")
     plt.title(title)
+
     plt.tight_layout()
     plt.savefig(path, dpi=140)
     plt.close()
@@ -152,32 +205,65 @@ def _get_feature_names(model, bds_type):
     return config["numeric"] + cat_names
 
 
+def _format_feature_label(name):
+    """Đổi tên feature sau OneHotEncoder cho dễ đọc trên biểu đồ."""
+    name = str(name)
+
+    replacements = {
+        "Quan_": "",
+        "TinhThanh_": "",
+        "Huong_": "Hướng: ",
+        "PhapLy_": "Pháp lý: ",
+        "Tang_": "Tầng: ",
+    }
+
+    for old, new in replacements.items():
+        name = name.replace(old, new)
+
+    name = name.replace("DienTich", "Diện tích")
+    name = name.replace("SoPhong", "Số phòng")
+    name = name.replace("SoToilet", "Số toilet")
+    name = name.replace("SoTang", "Số tầng")
+    name = name.replace("ChieuNgang", "Chiều ngang")
+    name = name.replace("ChieuDai", "Chiều dài")
+    name = name.replace("TangTruong", "Tăng trưởng")
+
+    return name
+
+
 def create_feature_importance_chart(model, bds_type, algorithm):
     feature_names = _get_feature_names(model, bds_type)
     reg = model.named_steps["regressor"]
+    bds_label = BDS_CONFIG[bds_type]["label"]
 
     if algorithm == "linear":
         values = np.abs(reg.coef_)
-        title = "Linear Regression Coefficients"
+        algorithm_label = "Linear Regression"
+        title = f"{bds_label} – Linear Regression Coefficients"
     elif algorithm == "random_forest":
         values = reg.feature_importances_
-        title = "Random Forest Feature Importance"
+        algorithm_label = "Random Forest"
+        title = f"{bds_label} – Random Forest Feature Importance"
     else:
         values = reg.feature_importances_
-        title = "XGBoost Feature Importance"
+        algorithm_label = "XGBoost"
+        title = f"{bds_label} – XGBoost Feature Importance"
 
     top = sorted(zip(feature_names, values), key=lambda x: x[1], reverse=True)[:10]
     if not top:
         return None
 
     labels, vals = zip(*top)
-    filename = _chart_name("feature_importance")
+    labels = [_format_feature_label(label) for label in labels]
+
+    filename = _chart_name(f"{bds_type}_{algorithm}_feature_importance")
     path = CHART_DIR / filename
 
     plt.figure(figsize=(8, 5))
     plt.barh(range(len(labels)), vals)
-    plt.yticks(range(len(labels)), labels)
+    plt.yticks(range(len(labels)), labels, fontsize=9)
     plt.gca().invert_yaxis()
+    plt.xlabel("Mức độ quan trọng")
     plt.title(title)
     plt.tight_layout()
     plt.savefig(path, dpi=140)
